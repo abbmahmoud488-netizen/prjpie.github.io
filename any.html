@@ -65,39 +65,6 @@
       background: #005bbb;
     }
     .hidden { display: none; }
-
-    .response {
-      background: #f4f9ff;
-      border-radius: 10px;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #dce9ff;
-      position: relative;
-    }
-
-    .delete-btn {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: red;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      padding: 3px 6px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-
-    .admin-btn {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      background: transparent;
-      border: none;
-      font-size: 26px;
-      cursor: pointer;
-      color: #fff;
-    }
   </style>
 </head>
 <body>
@@ -106,9 +73,7 @@
     🧭 تقييم مشكلة الكراسي - OFPPT Offshore
   </header>
 
-  <button class="admin-btn" id="adminEye">👁️</button>
-
-  <div class="container" id="userContainer">
+  <div class="container">
     <h2>📨 المشكلة:</h2>
     <p>هل تعاني من الكراسي؟</p>
 
@@ -127,118 +92,58 @@
     </form>
   </div>
 
-  <!-- لوحة المشرف -->
-  <div class="container hidden" id="adminPanel">
-    <h2>🧑‍💼 لوحة المشرف</h2>
-    <div id="adminArea"></div>
-  </div>
+  <!-- EmailJS SDK الجديد -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
   <script>
-    const ADMIN_CODE = "pie102";
-    const adminEye = document.getElementById("adminEye");
-    const adminPanel = document.getElementById("adminPanel");
-    const adminArea = document.getElementById("adminArea");
+    // تهيئة EmailJS
+    emailjs.init("WDlAyf26rsha6Qajm"); // 👈 Public Key ديالك
+
     const form = document.getElementById("responseForm");
     const issueAnswer = document.getElementById("issueAnswer");
     const userSolutions = document.getElementById("userSolutions");
     const solutionsLabel = document.getElementById("solutionsLabel");
 
-    // إظهار/إخفاء حقل الحلول حسب الإجابة
+    // إظهار أو إخفاء حقل الحلول
     issueAnswer.addEventListener("change", () => {
-      if(issueAnswer.value === "نعم") {
+      if (issueAnswer.value === "نعم") {
         userSolutions.classList.remove("hidden");
         solutionsLabel.classList.remove("hidden");
-        userSolutions.required = true;
       } else {
         userSolutions.classList.add("hidden");
         solutionsLabel.classList.add("hidden");
-        userSolutions.required = false;
         userSolutions.value = "";
       }
     });
 
-    // عند إرسال تقييم المستخدم
-    form.addEventListener("submit", (e) => {
+    // إرسال البيانات عبر EmailJS
+    form.addEventListener("submit", function(e) {
       e.preventDefault();
 
       const answer = issueAnswer.value;
-      const solutions = userSolutions.value.trim();
+      const solutions = userSolutions.value.trim() || "لا توجد حلول";
+      const date = new Date().toLocaleString();
 
-      const response = {
+      const templateParams = {
         issue: "هل تعاني من الكراسي؟",
         answer: answer,
-        solutions: answer === "نعم" ? solutions : "",
-        date: new Date().toLocaleString()
+        solutions: solutions,
+        date: date
       };
 
-      const data = JSON.parse(localStorage.getItem("responsesData") || "[]");
-      data.push(response);
-      localStorage.setItem("responsesData", JSON.stringify(data));
-
-      // رسالة شكر
-      if(answer === "نعم") {
-        alert("✅ شكراً على مشاركتك وحلولك!");
-      } else {
-        alert("✅ شكراً على مشاركتك!");
-      }
-
-      form.reset();
-      userSolutions.classList.add("hidden");
-      solutionsLabel.classList.add("hidden");
-    });
-
-    // وظيفة عرض لوحة المشرف
-    adminEye.addEventListener("click", ()=> {
-      const code = prompt("رمز المشرف:");
-      if(code === ADMIN_CODE){
-        adminPanel.classList.remove("hidden");
-        renderAdmin();
-        alert("✅ مرحبًا بك أيها المشرف");
-        adminPanel.scrollIntoView({behavior:"smooth"});
-      } else {
-        alert("❌ الكود غير صحيح");
-      }
-    });
-
-    // عرض الردود وتحميل JSON + حذف أي مشاركة
-    function renderAdmin(){
-      const responses = JSON.parse(localStorage.getItem("responsesData") || "[]");
-      adminArea.innerHTML = `
-        <h3>📋 الردود المسجلة (${responses.length})</h3>
-        <button id="downloadJson">💾 تحميل JSON</button>
-        <div id="responsesList">
-          ${responses.length ? responses.map((r, idx) => `
-            <div class="response">
-              <button class="delete-btn" data-index="${idx}">حذف</button>
-              <p>📝 المشكلة: ${r.issue} (${r.date})</p>
-              <p>✅ إجابة: ${r.answer}</p>
-              <p>💡 حلول: ${r.solutions || "لا توجد حلول"} </p>
-            </div>
-          `).join('') : "<p>🚫 لا توجد ردود مسجلة بعد.</p>"}
-        </div>
-      `;
-
-      // تحميل JSON
-      document.getElementById("downloadJson").addEventListener("click", ()=> {
-        const blob = new Blob([JSON.stringify(responses, null, 2)], {type:"application/json"});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "responses_ofppt_offshore.json";
-        a.click();
-        URL.revokeObjectURL(url);
-      });
-
-      // حذف مشاركة
-      document.querySelectorAll(".delete-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-          const idx = e.target.getAttribute("data-index");
-          responses.splice(idx, 1);
-          localStorage.setItem("responsesData", JSON.stringify(responses));
-          renderAdmin(); // إعادة عرض بعد الحذف
+      emailjs.send("service_ldy79am", "template_5s20bcy", templateParams)
+        .then(() => {
+          alert("✅ تم إرسال الإجابة بنجاح! شكراً على مشاركتك 🙌");
+          form.reset();
+          userSolutions.classList.add("hidden");
+          solutionsLabel.classList.add("hidden");
+        })
+        .catch((err) => {
+          console.error("EmailJS Error:", err);
+          alert("❌ حدث خطأ أثناء الإرسال، تحقق من Console");
         });
-      });
-    }
+    });
   </script>
+
 </body>
 </html>
